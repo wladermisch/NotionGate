@@ -23,7 +23,7 @@
 3.  Activate it: `.venv\Scripts\activate`
 4.  Install dependencies:
     ```bash
-    pip install PySide6 Pillow pyperclip pyautogui notion-client watchdog pywin32 sentry-sdk
+    pip install requirements.txt
     ```
 5.  Run the script: `python NotionLink.pyw`
 
