@@ -11,9 +11,9 @@
 
 ### For Users (Recommended, Binary)
 
-1.  Download the latest `NotionLink_vX.X.exe` from the **[Releases Page](https://github.com/wladermisch/NotionLink/releases)**.
-2.  Place the `.exe` in a **permanent location** (e.g., `C:\Program Files\NotionLink\NotionLink.exe`).
-3.  Run `NotionLink.exe`. The app will create `config.json` and log files (`notionlink.log`, `error.log`) in the same folder.
+1.  Download the latest `NotionLink_Installer_gvX.X.exe` from the **[Releases Page](https://github.com/wladermisch/NotionLink/releases)**.
+2.  Follow the instructions from the installer, select your desired program location and settings.
+3.  Run `NotionLink` from Windows Search. The app will create `config.json` and log files (`notionlink.log`, `error.log`) in the same folder.
 4.  Follow the **First-Time Setup** steps below.
 
 ### For Developers (from Source)
