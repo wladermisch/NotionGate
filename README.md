@@ -19,13 +19,11 @@
 ### For Developers (from Source)
 
 1.  Clone this repository: `git clone https://github.com/wladermisch/NotionLink.git`
-2.  Create a virtual environment: `python -m venv .venv`
-3.  Activate it: `.venv\Scripts\activate`
-4.  Install dependencies:
+2.  Install dependencies:
     ```bash
     pip install requirements.txt
     ```
-5.  Run the script: `python NotionLink.pyw`
+3.  Run the script: `python NotionLink.pyw`
 
 ---
 
@@ -33,7 +31,7 @@
 
 ### 1. First-Time Setup (Wizard)
 
-When you first launch the app, a welcome wizard will appear.
+After installation, a welcome wizard will appear (first time only).
 
 1.  **Create Token:** The app needs an "Internal Integration Token" to talk to your Notion account.
     * Click the button to open the [Notion Integrations page](https://www.notion.so/my-integrations).
@@ -88,6 +86,7 @@ If you open a new [GitHub Issue](https://github.com/wladermisch/NotionLink/issue
 ## [Changelog](https://wladermisch.github.io/NotionLink/resources/changelog.html)
 
 **You can access the changelog on the [github page](https://wladermisch.github.io/NotionLink/resources/changelog.html).**
+The Website is still in developement, I recommend checking the release notes for full changelogs.
 
 ## 📋 Features
 
@@ -95,11 +94,11 @@ If you open a new [GitHub Issue](https://github.com/wladermisch/NotionLink/issue
 * **Automatic Folder Sync:** Map a local folder to a Notion page. Any *new* file you save in that folder is automatically added as a link to that page.
 * **Startup & Backfill Sync:** On start (or when adding a new mapping), the app syncs *all* existing files in the folder to the Notion page.
 * **Smart Deduplication:** The app checks for existing URLs *and* filenames to prevent uploading duplicates.
-* **Starts with Windows:** A built-in option (in setup and the menu) to launch the app on boot.
+* **Starts with Windows:** A built-in option (in setup and the menu) to launch the app on boot. (You may enable or disable in the dashboard anytime.)
 * **Simple Setup Wizard:** A one-time setup dialog guides you through creating your Notion token.
 * **Dark Mode GUI:** A modern, dark-themed UI for managing your token and folder-page mappings.
 * **Link Converter Tools:** Menu options to quickly convert a path or your clipboard content into a `localhost` link.
-* **Reliable Tray Menu:** A standard, stable context menu.
+* **Dashboard:** A nice little dashboard with important info (logs) and useful buttons to create file links.
 
 ---
 
@@ -121,6 +120,7 @@ NotionLink solves this by running a tiny, local HTTP server on your PC.
 3.  Instead of serving a webpage, it simply opens `C:\Projects\File.pdf` directly with Windows Explorer.
 
 Best of all, it can monitor entire folders and automatically add links for new files to a specific Notion page.
+Unlike other software that are like this, we have no limitation on speed, files, directories and it´s completely free!
 
 ---
 
@@ -131,17 +131,7 @@ for NotionLink >v3
 * **What it does:** If the application crashes unexpectedly, Sentry automatically sends us a anonymous report about the crash (e.g., "Error in line X"). This helps us fix bugs in future versions.
 * **What about Privacy?** We do **not** send or collect any of your personal data. The automated reports **do not include** your Notion Token, your file paths, your IP address, or any other personally identifiable information.
 * **What about Performance?** It does not affect the app's performance. It only runs for a split second if an error occurs and is otherwise completely inactive.
-* **Can I disable it?** Yes, you can disable this anonymous reporting at any time. You can uncheck the box during the initial setup, or later by setting `"sentry_enabled": false` in your `config.json` file.
-
----
-
-## 🛠️ Technical Overview
-
-* **Backend:** All background processes (HTTP server, Watchdog file observer, startup syncs) run in stable, separate standard Python `threading.Thread`s.
-* **Frontend:** The UI (dialogs, tray menu) is built entirely with **PySide6**.
-* **Error Reporting:** Uncaught exceptions are automatically and **anonymously** sent to **Sentry** (if enabled) to help with debugging.
-* **Logging:** All application output is redirected to a robust `logging` system, writing to `notionlink.log` (for info) and `error.log` (for detailed errors, including PII).
-* **Configuration:** All settings, including your token and mappings, are stored locally in a `config.json` file.
+* **Can I disable it?** Yes, you can disable this anonymous reporting at any time. You can uncheck the box during the initial setup, or later in the dashboard directly. ( `"sentry_enabled": false` in your `config.json` file.)
 
 ---
 
