@@ -3,6 +3,9 @@ import os
 import json
 import threading
 import ctypes
+import tempfile
+import urllib.request
+import msvcrt
 
 try:
     from PySide6.QtWidgets import QApplication, QMessageBox, QDialog
@@ -23,6 +26,37 @@ except ImportError as e:
     except Exception:
         pass
     sys.exit(1)
+
+
+_instance_lock_handle = None
+
+
+def _handoff_to_running_instance():
+    try:
+        port = config.get("server_port", 8000)
+        req = urllib.request.Request(f"http://127.0.0.1:{port}/_notionlink/open-dashboard")
+        with urllib.request.urlopen(req, timeout=1.5) as response:
+            return response.status == 200
+    except Exception:
+        return False
+
+
+def _acquire_single_instance_lock():
+    lock_file_path = os.path.join(tempfile.gettempdir(), "notionlink.instance.lock")
+    lock_handle = open(lock_file_path, "a+")
+    try:
+        lock_handle.seek(0)
+        msvcrt.locking(lock_handle.fileno(), msvcrt.LK_NBLCK, 1)
+        lock_handle.seek(0)
+        lock_handle.write(str(os.getpid()))
+        lock_handle.flush()
+        return lock_handle
+    except OSError:
+        try:
+            lock_handle.close()
+        except Exception:
+            pass
+        return None
 
 try:
     from src.core import (APP_VERSION, config, config_file_path, logger, 
@@ -49,6 +83,14 @@ except ImportError as e:
 
 
 def main():
+    global _instance_lock_handle
+    _instance_lock_handle = _acquire_single_instance_lock()
+    if _instance_lock_handle is None:
+        if _handoff_to_running_instance():
+            print("Another NotionLink instance is already running. Brought existing dashboard to front.")
+            return
+        print("Another NotionLink instance appears to be running.")
+        return
     
     print("Sentry initialization deferred (background).")
     
@@ -57,7 +99,7 @@ def main():
     
     if sys.platform.startswith('win'):
         try:
-            appid = f"com.notionlink.app.{APP_VERSION}"
+            appid = "NotionLink"
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(appid)
             print(f"Set Windows AppUserModelID: {appid}")
         except Exception as e:
@@ -106,7 +148,17 @@ def main():
     QTimer.singleShot(0, _start_background_services)
     
     print("Starting main GUI loop (app.exec())...")
-    sys.exit(app.exec())
+    exit_code = app.exec()
+
+    try:
+        if _instance_lock_handle:
+            _instance_lock_handle.seek(0)
+            msvcrt.locking(_instance_lock_handle.fileno(), msvcrt.LK_UNLCK, 1)
+            _instance_lock_handle.close()
+    except Exception:
+        pass
+
+    sys.exit(exit_code)
 
 
 if __name__ == '__main__':

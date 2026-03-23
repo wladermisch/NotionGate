@@ -629,7 +629,10 @@ def run_startup_sync(tray_app):
                 )
                 sync_thread.start()
             else:
+                warning_msg = f"Mapped folder path is missing or inaccessible: {folder_path}"
                 print(f"--> Skipping startup sync for invalid path: {folder_path}")
+                if tray_app:
+                    tray_app.user_error_signal.emit(warning_msg)
             
     if transaction:
         transaction.finish()

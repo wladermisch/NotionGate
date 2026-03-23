@@ -170,7 +170,6 @@ DARK_STYLESHEET = """
         color: #ffffff;
     }
     QFrame {
-        border: 1px solid #444444;
-        border-radius: 4px;
+        border: none;
     }
 """

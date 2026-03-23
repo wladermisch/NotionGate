@@ -27,6 +27,7 @@ shell = win32com.client.Dispatch("WScript.Shell")
 
 ASSETS_DIR = 'assets'
 TRAY_ICON_ICO = resource_path(os.path.join(ASSETS_DIR, 'logo.ico'))
+_handoff_tray_app = None
 
 # =============================================================================
 # HTTP SERVER
@@ -48,6 +49,25 @@ class MyHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         print('Getting path : --------')
         print(self.path)
+        if self.path.startswith('/_notionlink/open-dashboard'):
+            try:
+                if _handoff_tray_app is not None:
+                    _handoff_tray_app.open_dashboard_from_handoff("NotionLink is already running in this session.")
+                payload = b'{"ok": true}'
+                self.send_response(HTTPStatus.OK)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+            except Exception as e:
+                error_payload = f'{{"ok": false, "error": "{str(e)}"}}'.encode('utf-8', errors='ignore')
+                self.send_response(HTTPStatus.INTERNAL_SERVER_ERROR)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(error_payload)))
+                self.end_headers()
+                self.wfile.write(error_payload)
+            return
+
         if not ('GET' in self.path) and not ('favicon' in self.path):
             # Attempt to open the file locally, then return a small HTML page
             # that tries to close the browser tab. Note: modern browsers often
@@ -116,11 +136,13 @@ def is_port_in_use(port, host=''):
 def start_server_blocking(tray_app):
     # Start the HTTP server in blocking mode.
     global httpd
+    global _handoff_tray_app
     from .core import httpd as httpd_global  # Use global from core
     
     port = config.get('server_port')
     
     try:
+        _handoff_tray_app = tray_app
         if is_port_in_use(port):
             raise OSError(f"Port {port} is already in use. Another NotionLink instance or application may be using it.")
 

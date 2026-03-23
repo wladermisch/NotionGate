@@ -10,7 +10,7 @@ import socket
 import uuid
 from collections import defaultdict
 
-APP_VERSION = "4.8.3"
+APP_VERSION = "5.0.0-ui"
 
 config_file_path = "config.json"
 
@@ -156,6 +156,11 @@ def is_user_error(exc_value):
 
 def exception_handler(exc_type, exc_value, exc_tb):
     global sentry_sdk
+
+    # Treat Ctrl+C / normal interpreter exits as non-errors.
+    if exc_type in (KeyboardInterrupt, SystemExit):
+        logger.info(f"Application exiting: {exc_type.__name__}")
+        return
     
     tb = ''.join(traceback.format_exception(exc_type, exc_value, exc_tb))
 
