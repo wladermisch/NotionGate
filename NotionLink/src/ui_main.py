@@ -798,6 +798,9 @@ class MainDashboardWindow(QMainWindow):
         mappings = config.get(key, [])
         if index < 0 or index >= len(mappings):
             return
+        if mapping_type == "page":
+            self._open_mapping_editor("page", index)
+            return
         dialog = EditMappingDialog(self.tray_app, existing_mapping=mappings[index], mapping_type=mapping_type)
         if dialog.exec() == QDialog.Accepted:
             data = dialog.get_mapping_data()
