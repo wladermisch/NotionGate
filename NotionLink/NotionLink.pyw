@@ -61,9 +61,7 @@ def _acquire_single_instance_lock():
 try:
     from src.core import (APP_VERSION, config, config_file_path, logger, 
                         init_sentry_if_enabled, exception_handler)
-    from src.notion import check_notion_status_once, run_startup_sync
     from src.server import start_server_blocking, TRAY_ICON_ICO
-    from src.ui_styles import DARK_STYLESHEET
     from src.ui_dialogs import InitialSetupDialog
     from src.ui_main import NotionLinkTrayApp
 except ImportError as e:
@@ -129,7 +127,7 @@ def main():
             print(f"Failed to reload config after wizard: {e}")
             sys.exit(1)
     
-    def _safe_start(task_name, target, delay_ms=0):
+    def _start_threaded(task_name, target, delay_ms=0):
         def _launch():
             try:
                 print(task_name)
@@ -139,11 +137,26 @@ def main():
 
         QTimer.singleShot(delay_ms, _launch)
 
-    # Stagger startup tasks so tray/dashboard become responsive immediately.
-    _safe_start("Starting HTTP server thread...", lambda: start_server_blocking(app.tray_app), delay_ms=100)
-    _safe_start("Starting Notion status check...", app.tray_app.run_status_check_thread, delay_ms=300)
-    _safe_start("Starting file observer (background)...", app.tray_app.start_file_observer, delay_ms=1200)
-    _safe_start("Running startup sync...", lambda: run_startup_sync(app.tray_app), delay_ms=3500)
+    def _start_ui(task_name, target, delay_ms=0):
+        def _launch():
+            try:
+                print(task_name)
+                target()
+            except Exception as e:
+                print(f"Failed to start task '{task_name}': {e}")
+
+        QTimer.singleShot(delay_ms, _launch)
+
+    def _run_startup_sync_late():
+        # Import lazily so heavy Notion sync setup does not impact first paint.
+        from src.notion import run_startup_sync
+        run_startup_sync(app.tray_app)
+
+    # Stagger startup so tray/dashboard are responsive before heavy background work begins.
+    _start_threaded("Starting HTTP server thread...", lambda: start_server_blocking(app.tray_app), delay_ms=100)
+    _start_ui("Starting Notion status check...", app.tray_app.run_status_check_thread, delay_ms=250)
+    _start_threaded("Starting file observer (background)...", app.tray_app.start_file_observer, delay_ms=1000)
+    _start_threaded("Running startup sync...", _run_startup_sync_late, delay_ms=3500)
     
     print("Starting main GUI loop (app.exec())...")
     exit_code = app.exec()

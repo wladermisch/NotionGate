@@ -191,9 +191,14 @@ class MainDashboardWindow(QMainWindow):
         nav_row.addWidget(self.breadcrumb_label, stretch=1)
         right_column.addLayout(nav_row)
 
+        self.status_section = QWidget()
+        status_section_layout = QVBoxLayout(self.status_section)
+        status_section_layout.setContentsMargins(0, 0, 0, 0)
+        status_section_layout.setSpacing(6)
+
         status_header = QLabel("System Status")
         status_header.setStyleSheet("font-size: 12pt; font-weight: bold;")
-        right_column.addWidget(status_header)
+        status_section_layout.addWidget(status_header)
 
         status_row = QHBoxLayout()
         status_row.setSpacing(8)
@@ -211,7 +216,8 @@ class MainDashboardWindow(QMainWindow):
         self.ack_btn.clicked.connect(self.acknowledge_status)
         self.ack_btn.setFixedWidth(32)
         status_row.addWidget(self.ack_btn, alignment=Qt.AlignTop)
-        right_column.addLayout(status_row)
+        status_section_layout.addLayout(status_row)
+        right_column.addWidget(self.status_section)
 
         token_status_layout = QHBoxLayout()
         self.token_status_icon = QLabel()
@@ -295,6 +301,8 @@ class MainDashboardWindow(QMainWindow):
         self.current_page = page_key
         self._set_breadcrumb(page_key)
         self.back_btn.setVisible(page_key != "dashboard")
+        if hasattr(self, "status_section"):
+            self.status_section.setVisible(page_key == "dashboard")
         self._clear_page_layout()
 
         if page_key == "dashboard":
