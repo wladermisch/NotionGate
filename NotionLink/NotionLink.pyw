@@ -129,23 +129,21 @@ def main():
             print(f"Failed to reload config after wizard: {e}")
             sys.exit(1)
     
-    def _start_background_services():
-        try:
-            print("Starting Notion status check...")
-            app.tray_app.run_status_check_thread()
+    def _safe_start(task_name, target, delay_ms=0):
+        def _launch():
+            try:
+                print(task_name)
+                threading.Thread(target=target, daemon=True).start()
+            except Exception as e:
+                print(f"Failed to start task '{task_name}': {e}")
 
-            print("Starting HTTP server thread...")
-            threading.Thread(target=start_server_blocking, args=(app.tray_app,), daemon=True).start()
+        QTimer.singleShot(delay_ms, _launch)
 
-            print("Starting file observer (background)...")
-            threading.Thread(target=app.tray_app.start_file_observer, daemon=True).start()
-
-            print("Running startup sync...")
-            threading.Thread(target=run_startup_sync, args=(app.tray_app,), daemon=True).start()
-        except Exception as e:
-            print(f"Error starting background services: {e}")
-
-    QTimer.singleShot(0, _start_background_services)
+    # Stagger startup tasks so tray/dashboard become responsive immediately.
+    _safe_start("Starting HTTP server thread...", lambda: start_server_blocking(app.tray_app), delay_ms=100)
+    _safe_start("Starting Notion status check...", app.tray_app.run_status_check_thread, delay_ms=300)
+    _safe_start("Starting file observer (background)...", app.tray_app.start_file_observer, delay_ms=1200)
+    _safe_start("Running startup sync...", lambda: run_startup_sync(app.tray_app), delay_ms=3500)
     
     print("Starting main GUI loop (app.exec())...")
     exit_code = app.exec()

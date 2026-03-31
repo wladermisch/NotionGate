@@ -216,6 +216,21 @@ class EditMappingDialog(BaseDialog):
         self.title_fetcher = None
 
         layout = QVBoxLayout(self)
+
+        def add_section_divider(label_text):
+            row = QHBoxLayout()
+            line_left = QFrame()
+            line_left.setFrameShape(QFrame.HLine)
+            line_left.setStyleSheet("color: #444444;")
+            line_right = QFrame()
+            line_right.setFrameShape(QFrame.HLine)
+            line_right.setStyleSheet("color: #444444;")
+            label = QLabel(label_text)
+            label.setStyleSheet("color: #bbbbbb; font-size: 9pt; font-weight: bold;")
+            row.addWidget(line_left, stretch=1)
+            row.addWidget(label)
+            row.addWidget(line_right, stretch=1)
+            layout.addLayout(row)
         
         layout.addWidget(QLabel(f"Notion {self.mapping_type_name} Link or ID:"))
         self.notion_id_entry = QLineEdit()
@@ -258,6 +273,45 @@ class EditMappingDialog(BaseDialog):
         folder_btn_layout.addWidget(remove_folder_btn)
         layout.addLayout(folder_btn_layout)
 
+        add_section_divider("Filters")
+        layout.addWidget(QLabel("Ignore files with extensions (comma-separated, e.g. *.tmp, *.log):"))
+        self.ignore_ext_entry = QLineEdit()
+        self.ignore_ext_entry.setText(", ".join(self.mapping.get("ignore_extensions", ["*.tmp", ".*", "desktop.ini"])))
+        layout.addWidget(self.ignore_ext_entry)
+
+        self.ignore_files_entry = QLineEdit()
+        self.ignore_files_entry.setText(", ".join(self.mapping.get("ignore_files", [])))
+
+        self.exclude_folders_entry = QLineEdit()
+        self.exclude_folders_entry.setText(", ".join(self.mapping.get("exclude_folders", [])))
+
+        compact_filters_row = QHBoxLayout()
+
+        ignore_files_col = QVBoxLayout()
+        ignore_files_col.addWidget(QLabel("Ignore files"))
+        files_btn_layout = QHBoxLayout()
+        files_btn_layout.addWidget(self.ignore_files_entry)
+        add_files_btn = QPushButton("Add Files...")
+        add_files_btn.setObjectName("secondaryButton")
+        add_files_btn.clicked.connect(self.add_files_to_ignore)
+        files_btn_layout.addWidget(add_files_btn)
+        ignore_files_col.addLayout(files_btn_layout)
+
+        exclude_folders_col = QVBoxLayout()
+        exclude_folders_col.addWidget(QLabel("Exclude folders"))
+        exclude_folders_btn_layout = QHBoxLayout()
+        exclude_folders_btn_layout.addWidget(self.exclude_folders_entry)
+        add_exclude_folder_btn = QPushButton("Add Folder...")
+        add_exclude_folder_btn.setObjectName("secondaryButton")
+        add_exclude_folder_btn.clicked.connect(self.add_folder_to_exclude)
+        exclude_folders_btn_layout.addWidget(add_exclude_folder_btn)
+        exclude_folders_col.addLayout(exclude_folders_btn_layout)
+
+        compact_filters_row.addLayout(ignore_files_col, stretch=1)
+        compact_filters_row.addLayout(exclude_folders_col, stretch=1)
+        layout.addLayout(compact_filters_row)
+
+        add_section_divider("Sync Settings")
         self.folder_discovery_checkbox = QCheckBox(
             "Folder discovery (include files inside subfolders during upload and sync)"
         )
@@ -275,23 +329,6 @@ class EditMappingDialog(BaseDialog):
             "When enabled, subfolders of selected folders are also added as links."
         )
         layout.addWidget(self.folder_links_checkbox)
-
-        layout.addWidget(QLabel("Ignore files with extensions (comma-separated, e.g. *.tmp, *.log):"))
-        self.ignore_ext_entry = QLineEdit()
-        self.ignore_ext_entry.setText(", ".join(self.mapping.get("ignore_extensions", ["*.tmp", ".*", "desktop.ini"])))
-        layout.addWidget(self.ignore_ext_entry)
-
-        layout.addWidget(QLabel("Ignore specific filenames (comma-separated, wildcards like * ok):"))
-        self.ignore_files_entry = QLineEdit()
-        self.ignore_files_entry.setText(", ".join(self.mapping.get("ignore_files", [])))
-        
-        files_btn_layout = QHBoxLayout()
-        files_btn_layout.addWidget(self.ignore_files_entry)
-        add_files_btn = QPushButton("Add Files...")
-        add_files_btn.setObjectName("secondaryButton")
-        add_files_btn.clicked.connect(self.add_files_to_ignore)
-        files_btn_layout.addWidget(add_files_btn)
-        layout.addLayout(files_btn_layout)
 
         self.full_lifecycle_checkbox = QCheckBox("Full Lifecycle Sync (sync file deletions and renames to Notion)")
         self.full_lifecycle_checkbox.setChecked(self.mapping.get("full_lifecycle_sync", True))
@@ -353,6 +390,16 @@ class EditMappingDialog(BaseDialog):
             self.ignore_files_entry.setText(", ".join(current_ignored))
             print(f"Added {new_files_added} new filenames to ignore list.")
 
+    def add_folder_to_exclude(self):
+        folder_path = QFileDialog.getExistingDirectory(self, "Select folder to exclude")
+        if not folder_path:
+            return
+
+        current_excluded = [p.strip() for p in self.exclude_folders_entry.text().split(",") if p.strip()]
+        if folder_path not in current_excluded:
+            current_excluded.append(folder_path)
+        self.exclude_folders_entry.setText(", ".join(current_excluded))
+
     def get_mapping_data(self):
         notion_id_or_link = self.notion_id_entry.text().strip()
         id_tuple = extract_id_and_title_from_link(notion_id_or_link)
@@ -376,6 +423,7 @@ class EditMappingDialog(BaseDialog):
             
         ignore_exts = [p.strip() for p in self.ignore_ext_entry.text().split(",") if p.strip()]
         ignore_files = [p.strip() for p in self.ignore_files_entry.text().split(",") if p.strip()]
+        exclude_folders = [p.strip() for p in self.exclude_folders_entry.text().split(",") if p.strip()]
             
         return {
             "notion_title": final_title,
@@ -383,6 +431,7 @@ class EditMappingDialog(BaseDialog):
             "folders": folders,
             "ignore_extensions": ignore_exts,
             "ignore_files": ignore_files,
+            "exclude_folders": exclude_folders,
             "full_lifecycle_sync": self.full_lifecycle_checkbox.isChecked(),
             "folder_discovery": self.folder_discovery_checkbox.isChecked(),
             "folder_links": self.folder_links_checkbox.isChecked()

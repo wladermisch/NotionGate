@@ -447,10 +447,7 @@ class MainDashboardWindow(QMainWindow):
         btn_row = QHBoxLayout()
         add_label = "Add Page Mapping" if mapping_type == "page" else "Add Database Mapping"
         add_btn = QPushButton(add_label)
-        if mapping_type == "page":
-            add_btn.clicked.connect(lambda: self._open_mapping_editor("page"))
-        else:
-            add_btn.clicked.connect(lambda: self._add_mapping(mapping_type))
+        add_btn.clicked.connect(lambda: self._open_mapping_editor(mapping_type))
         btn_row.addWidget(add_btn)
         btn_row.addStretch()
         self.page_layout.addLayout(btn_row)
@@ -474,10 +471,24 @@ class MainDashboardWindow(QMainWindow):
         state = self.mapping_editor_state or {"mapping_type": "page", "index": None, "existing": None}
         mapping_type = state.get("mapping_type", "page")
         existing = state.get("existing") or {}
+        mapping_type_name = "Page" if mapping_type == "page" else "Database"
 
-        title = QLabel("Add Page Mapping" if state.get("index") is None else "Edit Page Mapping")
+        title = QLabel(f"Add {mapping_type_name} Mapping" if state.get("index") is None else f"Edit {mapping_type_name} Mapping")
         title.setStyleSheet("font-size: 13pt; font-weight: bold;")
         self.page_layout.addWidget(title)
+
+        if mapping_type == "database":
+            info_label = QLabel(
+                "<b>Database Properties:</b> NotionLink will automatically create required properties if missing:\n"
+                "  - <b>Name</b> (Title) - For file names\n"
+                "  - <b>Link</b> (URL) - For file links\n"
+                "  - <b>Created</b> (Date) - Creation timestamp\n"
+                "  - <b>Modified</b> (Date) - Last modified timestamp\n"
+                "  - <b>Size (Bytes)</b> (Number) - File size"
+            )
+            info_label.setWordWrap(True)
+            info_label.setStyleSheet("color: #17a2b8; border: 1px solid #17a2b8; padding: 5px; border-radius: 4px;")
+            self.page_layout.addWidget(info_label)
 
         self.mapping_editor_error = QLabel("")
         self.mapping_editor_error.setStyleSheet("color: #ff9999;")
@@ -485,11 +496,27 @@ class MainDashboardWindow(QMainWindow):
         self.mapping_editor_manual_title = bool(existing.get("notion_title", "").strip())
         self.mapping_editor_title_fetcher = None
 
+        def add_section_divider(label_text):
+            row = QHBoxLayout()
+            line_left = QFrame()
+            line_left.setFrameShape(QFrame.HLine)
+            line_left.setStyleSheet("color: #444444;")
+            line_right = QFrame()
+            line_right.setFrameShape(QFrame.HLine)
+            line_right.setStyleSheet("color: #444444;")
+            label = QLabel(label_text)
+            label.setStyleSheet("color: #bbbbbb; font-size: 9pt; font-weight: bold;")
+            row.addWidget(line_left, stretch=1)
+            row.addWidget(label)
+            row.addWidget(line_right, stretch=1)
+            self.page_layout.addLayout(row)
+
         form = QFormLayout()
         self.mapping_editor_notion_id = QLineEdit(existing.get("notion_id", ""))
         self.mapping_editor_notion_title = QLineEdit(existing.get("notion_title", ""))
         self.mapping_editor_ignore_ext = QLineEdit(", ".join(existing.get("ignore_extensions", ["*.tmp", ".*", "desktop.ini"])))
         self.mapping_editor_ignore_files = QLineEdit(", ".join(existing.get("ignore_files", [])))
+        self.mapping_editor_exclude_folders = QLineEdit(", ".join(existing.get("exclude_folders", [])))
         self.mapping_editor_folder_discovery = QCheckBox("Include subfolder files")
         self.mapping_editor_folder_discovery.setChecked(existing.get("folder_discovery", False))
         self.mapping_editor_folder_links = QCheckBox("Add subfolder links")
@@ -499,8 +526,6 @@ class MainDashboardWindow(QMainWindow):
 
         form.addRow("Notion Link or ID:", self.mapping_editor_notion_id)
         form.addRow("Mapping Title:", self.mapping_editor_notion_title)
-        form.addRow("Ignore extensions:", self.mapping_editor_ignore_ext)
-        form.addRow("Ignore files:", self.mapping_editor_ignore_files)
         self.page_layout.addLayout(form)
 
         self.mapping_editor_notion_id.textChanged.connect(self._mapping_editor_parse_notion_input)
@@ -509,10 +534,12 @@ class MainDashboardWindow(QMainWindow):
         # Prime title autofill immediately if a valid Notion link/ID already exists.
         self._mapping_editor_parse_notion_input(self.mapping_editor_notion_id.text())
 
+        add_section_divider("Sync Settings")
         self.page_layout.addWidget(self.mapping_editor_folder_discovery)
         self.page_layout.addWidget(self.mapping_editor_folder_links)
         self.page_layout.addWidget(self.mapping_editor_lifecycle)
 
+        add_section_divider("Synced Folders")
         folders_label = QLabel("Synced folders")
         folders_label.setStyleSheet("font-size: 11pt; font-weight: bold;")
         self.page_layout.addWidget(folders_label)
@@ -534,6 +561,42 @@ class MainDashboardWindow(QMainWindow):
         folder_btn_row.addStretch()
         self.page_layout.addLayout(folder_btn_row)
 
+        add_section_divider("Filters")
+        ignore_ext_label = QLabel("Ignore file extensions (comma-separated, e.g. *.tmp, *.log)")
+        ignore_ext_label.setStyleSheet("color: #bbbbbb;")
+        self.page_layout.addWidget(ignore_ext_label)
+        self.page_layout.addWidget(self.mapping_editor_ignore_ext)
+
+        compact_filters_row = QHBoxLayout()
+
+        ignore_files_col = QVBoxLayout()
+        ignore_files_label = QLabel("Ignore files")
+        ignore_files_label.setStyleSheet("color: #bbbbbb;")
+        ignore_files_col.addWidget(ignore_files_label)
+        ignore_files_row = QHBoxLayout()
+        ignore_files_row.addWidget(self.mapping_editor_ignore_files)
+        add_files_btn = QPushButton("Add Files...")
+        add_files_btn.setObjectName("secondaryButton")
+        add_files_btn.clicked.connect(self._mapping_editor_add_files_to_ignore)
+        ignore_files_row.addWidget(add_files_btn)
+        ignore_files_col.addLayout(ignore_files_row)
+
+        exclude_folders_col = QVBoxLayout()
+        exclude_folders_label = QLabel("Exclude folders")
+        exclude_folders_label.setStyleSheet("color: #bbbbbb;")
+        exclude_folders_col.addWidget(exclude_folders_label)
+        exclude_folders_row = QHBoxLayout()
+        exclude_folders_row.addWidget(self.mapping_editor_exclude_folders)
+        add_exclude_folder_btn = QPushButton("Add Folder...")
+        add_exclude_folder_btn.setObjectName("secondaryButton")
+        add_exclude_folder_btn.clicked.connect(self._mapping_editor_add_excluded_folder)
+        exclude_folders_row.addWidget(add_exclude_folder_btn)
+        exclude_folders_col.addLayout(exclude_folders_row)
+
+        compact_filters_row.addLayout(ignore_files_col, stretch=1)
+        compact_filters_row.addLayout(exclude_folders_col, stretch=1)
+        self.page_layout.addLayout(compact_filters_row)
+
         self.page_layout.addWidget(self.mapping_editor_error)
 
         action_row = QHBoxLayout()
@@ -541,7 +604,8 @@ class MainDashboardWindow(QMainWindow):
         save_btn.clicked.connect(self._mapping_editor_save)
         cancel_btn = QPushButton("Cancel")
         cancel_btn.setObjectName("secondaryButton")
-        cancel_btn.clicked.connect(lambda: self.navigate_to("page_mappings", push_history=False))
+        cancel_target = "page_mappings" if mapping_type == "page" else "database_mappings"
+        cancel_btn.clicked.connect(lambda: self.navigate_to(cancel_target, push_history=False))
         action_row.addWidget(save_btn)
         action_row.addWidget(cancel_btn)
         action_row.addStretch()
@@ -556,6 +620,28 @@ class MainDashboardWindow(QMainWindow):
     def _mapping_editor_remove_selected_folder(self):
         for item in self.mapping_editor_folders.selectedItems():
             self.mapping_editor_folders.takeItem(self.mapping_editor_folders.row(item))
+
+    def _mapping_editor_add_files_to_ignore(self):
+        files, _ = QFileDialog.getOpenFileNames(self, "Select files to ignore")
+        if not files:
+            return
+
+        current_ignored = [p.strip() for p in self.mapping_editor_ignore_files.text().split(",") if p.strip()]
+        for file_path in files:
+            filename = os.path.basename(file_path)
+            if filename not in current_ignored:
+                current_ignored.append(filename)
+        self.mapping_editor_ignore_files.setText(", ".join(current_ignored))
+
+    def _mapping_editor_add_excluded_folder(self):
+        folder_path = QFileDialog.getExistingDirectory(self, "Select folder to exclude")
+        if not folder_path:
+            return
+
+        current_excluded = [p.strip() for p in self.mapping_editor_exclude_folders.text().split(",") if p.strip()]
+        if folder_path not in current_excluded:
+            current_excluded.append(folder_path)
+        self.mapping_editor_exclude_folders.setText(", ".join(current_excluded))
 
     def _mapping_editor_save(self):
         notion_input = self.mapping_editor_notion_id.text().strip()
@@ -580,6 +666,7 @@ class MainDashboardWindow(QMainWindow):
             "folders": folders,
             "ignore_extensions": [p.strip() for p in self.mapping_editor_ignore_ext.text().split(",") if p.strip()],
             "ignore_files": [p.strip() for p in self.mapping_editor_ignore_files.text().split(",") if p.strip()],
+            "exclude_folders": [p.strip() for p in self.mapping_editor_exclude_folders.text().split(",") if p.strip()],
             "full_lifecycle_sync": self.mapping_editor_lifecycle.isChecked(),
             "folder_discovery": self.mapping_editor_folder_discovery.isChecked(),
             "folder_links": self.mapping_editor_folder_links.isChecked(),
@@ -590,6 +677,10 @@ class MainDashboardWindow(QMainWindow):
         mapping_type = state.get("mapping_type", "page")
         key = f"{mapping_type}_mappings"
         idx = state.get("index")
+
+        if mapping_type == "database":
+            if not self._mapping_editor_ensure_database_properties(notion_id):
+                return
 
         if idx is None:
             config[key].append(mapping_data)
@@ -613,10 +704,71 @@ class MainDashboardWindow(QMainWindow):
 
         self.tray_app.restart_file_observer()
         self.mapping_editor_state = None
-        self.navigate_to("page_mappings", push_history=False)
+        target_page = "page_mappings" if mapping_type == "page" else "database_mappings"
+        self.navigate_to(target_page, push_history=False)
 
     def _mapping_editor_on_title_edited(self, _text):
         self.mapping_editor_manual_title = True
+
+    def _mapping_editor_ensure_database_properties(self, database_id):
+        try:
+            notion = Client(auth=config.get("notion_token"))
+            db_response = notion.databases.retrieve(database_id=database_id)
+            properties = db_response.get("properties", {})
+
+            required_props = {
+                "Name": "title",
+                "Link": "url",
+                "Created": "date",
+                "Modified": "date",
+                "Size (Bytes)": "number",
+            }
+
+            missing_props = {}
+            for prop_name, prop_type in required_props.items():
+                if prop_name not in properties:
+                    missing_props[prop_name] = prop_type
+                elif prop_name == "Name" and properties["Name"].get("type") != "title":
+                    missing_props[prop_name] = prop_type
+
+            if not missing_props:
+                return True
+
+            missing_list = "\n".join([f"  - {name} ({ptype.capitalize()})" for name, ptype in missing_props.items()])
+            decision = QMessageBox.question(
+                self,
+                "Auto-Configure Database",
+                "This database is missing required properties for NotionLink.\n\n"
+                f"The following properties will be created:\n{missing_list}\n\n"
+                "Continue?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.Yes,
+            )
+            if decision != QMessageBox.Yes:
+                self.mapping_editor_error.setText("Database setup cancelled. Please add required properties manually.")
+                return False
+
+            new_properties = {}
+            for prop_name, prop_type in missing_props.items():
+                if prop_type == "title":
+                    new_properties[prop_name] = {"title": {}}
+                elif prop_type == "url":
+                    new_properties[prop_name] = {"url": {}}
+                elif prop_type == "date":
+                    new_properties[prop_name] = {"date": {}}
+                elif prop_type == "number":
+                    new_properties[prop_name] = {"number": {"format": "number"}}
+
+            notion.databases.update(database_id=database_id, properties=new_properties)
+            QMessageBox.information(
+                self,
+                "Success",
+                "Database properties created successfully.",
+            )
+            return True
+        except Exception as e:
+            self.mapping_editor_error.setText(f"Error configuring database properties: {e}")
+            return False
 
     def _mapping_editor_parse_notion_input(self, text):
         id_tuple = extract_id_and_title_from_link(text)
@@ -798,20 +950,7 @@ class MainDashboardWindow(QMainWindow):
         mappings = config.get(key, [])
         if index < 0 or index >= len(mappings):
             return
-        if mapping_type == "page":
-            self._open_mapping_editor("page", index)
-            return
-        dialog = EditMappingDialog(self.tray_app, existing_mapping=mappings[index], mapping_type=mapping_type)
-        if dialog.exec() == QDialog.Accepted:
-            data = dialog.get_mapping_data()
-            if not data:
-                return
-            config[key][index] = data
-            with open(config_file_path, "w") as config_file:
-                json.dump(config, config_file, indent=4)
-            self.tray_app.restart_file_observer()
-            self.tray_app.show_notification("Mapping Updated", "Mapping saved.")
-            self.render_page(self.current_page)
+        self._open_mapping_editor(mapping_type, index)
 
     def _remove_mapping(self, index, mapping_type):
         key = f"{mapping_type}_mappings"
@@ -1509,7 +1648,7 @@ class NotionLinkTrayApp(QObject):
                         continue
                     path = os.path.expandvars(folder_path)
                     if os.path.isdir(path):
-                        event_handler = NotionFileHandler(config, mapping, mapping_type, self)
+                        event_handler = NotionFileHandler(config, mapping, mapping_type, self, watched_root=path)
                         recursive_watch = bool(mapping.get("folder_discovery", False))
                         observer.schedule(event_handler, path, recursive=recursive_watch)
                         mode = "recursive" if recursive_watch else "non-recursive"
@@ -1528,6 +1667,37 @@ class NotionLinkTrayApp(QObject):
         # Manual upload all files in folder to Notion
         print(f"Starting manual upload for folder: {folder_path}")
         global config, notified_errors
+
+        def is_excluded_path(candidate_path):
+            exclude_patterns = mapping_config.get("exclude_folders", [])
+            if not exclude_patterns:
+                return False
+
+            candidate_norm = os.path.normcase(os.path.normpath(candidate_path))
+            base_root = os.path.normcase(os.path.normpath(folder_path))
+            rel_path = ""
+            try:
+                rel_path = os.path.relpath(candidate_norm, start=base_root).replace("\\", "/")
+            except ValueError:
+                rel_path = candidate_norm.replace("\\", "/")
+
+            for pattern in exclude_patterns:
+                p = (pattern or "").strip()
+                if not p:
+                    continue
+
+                expanded = os.path.normcase(os.path.normpath(os.path.expandvars(p)))
+                if os.path.isabs(expanded):
+                    if candidate_norm == expanded or candidate_norm.startswith(expanded + os.sep):
+                        return True
+
+                p_rel = p.replace("\\", "/")
+                if fnmatch.fnmatch(os.path.basename(candidate_norm), p):
+                    return True
+                if rel_path and (fnmatch.fnmatch(rel_path, p_rel) or rel_path.startswith(p_rel.rstrip("/") + "/")):
+                    return True
+
+            return False
 
         if not folder_path or not os.path.isdir(folder_path):
             msg = f"Mapped folder path is missing or inaccessible: {folder_path}"
@@ -1560,20 +1730,29 @@ class NotionLinkTrayApp(QObject):
                 for name in os.listdir(folder_path):
                     full_path = os.path.join(folder_path, name)
                     if os.path.isdir(full_path):
+                        if is_excluded_path(full_path):
+                            print(f"Skipping excluded folder link: {full_path}")
+                            continue
                         sync_file_to_notion(full_path, config, mapping_config, mapping_type, self, is_batch=True)
                         files_uploaded_count += 1
                         time.sleep(0.05)
 
             if discover_subfolder_files:
                 file_paths = []
-                for root, _, files in os.walk(folder_path):
+                for root, dirs, files in os.walk(folder_path):
+                    dirs[:] = [d for d in dirs if not is_excluded_path(os.path.join(root, d))]
                     for filename in files:
-                        file_paths.append(os.path.join(root, filename))
+                        full_file = os.path.join(root, filename)
+                        if is_excluded_path(full_file):
+                            continue
+                        file_paths.append(full_file)
             else:
                 file_paths = []
                 for filename in os.listdir(folder_path):
                     full_file_path = os.path.join(folder_path, filename)
                     if os.path.isfile(full_file_path):
+                        if is_excluded_path(full_file_path):
+                            continue
                         file_paths.append(full_file_path)
 
             for full_file_path in file_paths:

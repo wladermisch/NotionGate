@@ -10,7 +10,7 @@ import socket
 import uuid
 from collections import defaultdict
 
-APP_VERSION = "5.0.0-ui"
+APP_VERSION = "5.1.3"
 
 config_file_path = "config.json"
 
@@ -25,7 +25,7 @@ default_config = {
     "sentry_enabled": True
 }
 
-# Globals
+# Shared runtime state
 observer = None
 httpd = None
 link_cache = {}
@@ -97,7 +97,7 @@ class StreamToLogger:
     def write(self, buf):
         buf = buf.rstrip('\n')
         if buf:
-            # Ensure error log file is created only on first error-level write
+            # Lazily attach error logging when needed.
             try:
                 if self.level >= logging.ERROR:
                     ensure_error_log_handler()
@@ -120,24 +120,20 @@ NETWORK_ERROR_STRINGS = [
 
 def is_user_error(exc_value):
     error_str = str(exc_value).lower()
-    
-    # Dependencies missing
+
     if isinstance(exc_value, (ImportError, ModuleNotFoundError)):
         return True
-    
-    # File not found / missing installation files
+
     if isinstance(exc_value, FileNotFoundError):
         if 'assets' in error_str or 'logo.ico' in error_str:
             return True
-    
-    # Port/permission errors
+
     if isinstance(exc_value, (OSError, PermissionError)):
         if hasattr(exc_value, 'errno') and exc_value.errno in (10013, 10048, 48, 98):
             return True
         if 'port' in error_str and ('already in use' in error_str or 'bind' in error_str or 'address already in use' in error_str):
             return True
-    
-    # Notion API errors
+
     if '404' in error_str or 'could not find block' in error_str or 'could not find page' in error_str:
         return True
     if '401' in error_str or 'unauthorized' in error_str or 'invalid token' in error_str:
@@ -146,8 +142,7 @@ def is_user_error(exc_value):
         return True
     if 'api_error' in error_str and ('validation' in error_str or 'invalid' in error_str):
         return True
-    
-    # Network / Timeout errors
+
     if any(x in error_str for x in NETWORK_ERROR_STRINGS):
         return True
     
@@ -157,14 +152,14 @@ def is_user_error(exc_value):
 def exception_handler(exc_type, exc_value, exc_tb):
     global sentry_sdk
 
-    # Treat Ctrl+C / normal interpreter exits as non-errors.
+    # Ignore normal process termination paths.
     if exc_type in (KeyboardInterrupt, SystemExit):
         logger.info(f"Application exiting: {exc_type.__name__}")
         return
     
     tb = ''.join(traceback.format_exception(exc_type, exc_value, exc_tb))
 
-    # Ensure the error file handler is attached before writing uncaught exceptions
+    # Make sure error output has a backing file.
     try:
         ensure_error_log_handler()
     except Exception:
@@ -298,9 +293,7 @@ def load_config():
                 
         print("Configuration loaded.")
         try:
-            # Initialize Sentry in a background thread to avoid blocking imports/startup.
-            # Sentry initialization can import network/IO heavy modules and may delay
-            # application startup significantly on some environments.
+            # Defer Sentry setup so startup stays responsive.
             threading.Thread(target=init_sentry_if_enabled, daemon=True).start()
         except Exception as e:
             logger.error(f"Error scheduling Sentry initialization: {e}")
@@ -319,7 +312,7 @@ def resource_path(relative_path):
     try:
         base_path = sys._MEIPASS
     except Exception:
-        base_path = os.path.dirname(os.path.dirname(__file__))  # Go up one level from src/
+        base_path = os.path.dirname(os.path.dirname(__file__))
     return os.path.join(base_path, relative_path)
 
 

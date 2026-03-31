@@ -187,15 +187,54 @@ def start_server_blocking(tray_app):
 class NotionFileHandler(FileSystemEventHandler):
     # Watchdog event handler for file system changes.
     
-    def __init__(self, config_data, mapping_config, mapping_type, tray_app):
+    def __init__(self, config_data, mapping_config, mapping_type, tray_app, watched_root=None):
         self.config_data = config_data
         self.mapping_config = mapping_config
         self.mapping_type = mapping_type
         self.tray_app = tray_app
+        self.watched_root = watched_root
         print(f"Watcher Handler init for {mapping_type} ...{mapping_config['notion_id'][-6:]}")
+
+    def _is_excluded_path(self, candidate_path):
+        exclude_patterns = self.mapping_config.get("exclude_folders", [])
+        if not exclude_patterns:
+            return False
+
+        candidate_norm = os.path.normcase(os.path.normpath(candidate_path))
+        base_root = os.path.normcase(os.path.normpath(self.watched_root)) if self.watched_root else None
+        rel_path = ""
+        if base_root:
+            try:
+                rel_path = os.path.relpath(candidate_norm, start=base_root).replace("\\", "/")
+            except ValueError:
+                rel_path = candidate_norm.replace("\\", "/")
+        else:
+            rel_path = candidate_norm.replace("\\", "/")
+
+        for pattern in exclude_patterns:
+            p = (pattern or "").strip()
+            if not p:
+                continue
+
+            expanded = os.path.normcase(os.path.normpath(os.path.expandvars(p)))
+            if os.path.isabs(expanded):
+                if candidate_norm == expanded or candidate_norm.startswith(expanded + os.sep):
+                    return True
+
+            p_rel = p.replace("\\", "/")
+            if fnmatch.fnmatch(os.path.basename(candidate_norm), p):
+                return True
+            if rel_path and (fnmatch.fnmatch(rel_path, p_rel) or rel_path.startswith(p_rel.rstrip("/") + "/")):
+                return True
+
+        return False
 
     def on_created(self, event):
         # handle file creation events
+        if self._is_excluded_path(event.src_path):
+            print(f"Ignoring (excluded folder): {event.src_path}")
+            return
+
         if event.is_directory:
             if self.mapping_config.get("folder_links", False):
                 folder_path = event.src_path
@@ -255,6 +294,9 @@ class NotionFileHandler(FileSystemEventHandler):
     
     def on_deleted(self, event):
         # handle file deletion events
+        if self._is_excluded_path(event.src_path):
+            return
+
         if event.is_directory:
             return
         
@@ -320,6 +362,9 @@ class NotionFileHandler(FileSystemEventHandler):
     
     def on_moved(self, event):
         # handle file rename/move events
+        if self._is_excluded_path(event.src_path) or self._is_excluded_path(event.dest_path):
+            return
+
         if event.is_directory:
             return
         
