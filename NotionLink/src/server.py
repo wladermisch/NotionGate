@@ -1,5 +1,6 @@
 import os
 import sys
+import html
 import socket
 import socketserver
 import threading
@@ -34,17 +35,47 @@ _handoff_tray_app = None
 # =============================================================================
 
 def open_explorer(Path):
-    # Open a file in Windows Explorer.
-    full_path = unquote(Path[1:].replace("/", "\\"))
+    # Open a local file/folder referenced by request path.
+    path_only = Path.split('?', 1)[0].split('#', 1)[0]
+    decoded = unquote(path_only)
+    full_path = os.path.normpath(decoded.lstrip('/').replace('/', '\\'))
     print(f"Opening full path with os.startfile: {full_path}")
+
+    if not full_path:
+        return False, "Invalid file path.", full_path
+
+    if not os.path.exists(full_path):
+        msg = f"Failed to open file: path not found: {full_path}"
+        print(msg)
+        return False, msg, full_path
+
     try:
         os.startfile(full_path)
+        return True, "Opened.", full_path
+    except FileNotFoundError as e:
+        msg = f"Failed to open file: {e}"
+        print(msg)
+        return False, msg, full_path
     except Exception as e:
-        print(f"Failed to open file: {e}")
+        msg = f"Failed to open file: {e}"
+        print(msg)
+        return False, msg, full_path
 
 
 class MyHandler(BaseHTTPRequestHandler):
     # HTTP request handler for opening files via browser links.
+
+    def _safe_write_response(self, status, payload, content_type='text/plain; charset=utf-8'):
+        try:
+            self.send_response(status)
+            self.send_header('Content-Type', content_type)
+            self.send_header('Content-Length', str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+            return True
+        except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError, OSError) as e:
+            logger.info(f"Client disconnected while sending response: {e}")
+            return False
     
     def do_GET(self):
         print('Getting path : --------')
@@ -54,18 +85,10 @@ class MyHandler(BaseHTTPRequestHandler):
                 if _handoff_tray_app is not None:
                     _handoff_tray_app.open_dashboard_from_handoff("NotionLink is already running in this session.")
                 payload = b'{"ok": true}'
-                self.send_response(HTTPStatus.OK)
-                self.send_header('Content-Type', 'application/json')
-                self.send_header('Content-Length', str(len(payload)))
-                self.end_headers()
-                self.wfile.write(payload)
+                self._safe_write_response(HTTPStatus.OK, payload, 'application/json')
             except Exception as e:
                 error_payload = f'{{"ok": false, "error": "{str(e)}"}}'.encode('utf-8', errors='ignore')
-                self.send_response(HTTPStatus.INTERNAL_SERVER_ERROR)
-                self.send_header('Content-Type', 'application/json')
-                self.send_header('Content-Length', str(len(error_payload)))
-                self.end_headers()
-                self.wfile.write(error_payload)
+                self._safe_write_response(HTTPStatus.INTERNAL_SERVER_ERROR, error_payload, 'application/json')
             return
 
         if not ('GET' in self.path) and not ('favicon' in self.path):
@@ -73,12 +96,17 @@ class MyHandler(BaseHTTPRequestHandler):
             # that tries to close the browser tab. Note: modern browsers often
             # block scripts from closing windows they didn't open, so this is
             # a best-effort fallback with a clear instruction for the user.
-            open_explorer(self.path)
-            html = b"""
+            opened, open_msg, opened_path = open_explorer(self.path)
+            escaped_path = html.escape(opened_path or '')
+            escaped_msg = html.escape(open_msg or '')
+            status = HTTPStatus.OK if opened else HTTPStatus.NOT_FOUND
+            response_html = f"""
             <!doctype html>
             <html><head><meta charset='utf-8'><title>Opening file...</title></head>
             <body>
-            <p>Opening file locally. You can close this tab.</p>
+            <p>{'Opening file locally.' if opened else 'Could not open the local path.'} You can close this tab.</p>
+            <p><small>{escaped_path}</small></p>
+            <p><small>{escaped_msg}</small></p>
             <script>
             (function(){
                 try {
@@ -93,16 +121,10 @@ class MyHandler(BaseHTTPRequestHandler):
             })();
             </script>
             </body></html>
-            """
-            self.send_response(HTTPStatus.OK)
-            self.send_header('Content-Type', 'text/html; charset=utf-8')
-            self.send_header('Content-Length', str(len(html)))
-            self.end_headers()
-            self.wfile.write(html)
+            """.encode('utf-8')
+            self._safe_write_response(status, response_html, 'text/html; charset=utf-8')
         else:
-            self.send_response(HTTPStatus.OK)
-            self.end_headers()
-            self.wfile.write(b'File Connection Server is running.')
+            self._safe_write_response(HTTPStatus.OK, b'File Connection Server is running.')
     
     def log_message(self, format, *args):
         logger.info("%s - - [%s] %s" %

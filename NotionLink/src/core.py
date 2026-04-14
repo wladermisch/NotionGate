@@ -12,7 +12,7 @@ import hashlib
 import urllib.request
 from collections import defaultdict
 
-APP_VERSION = "5.1.4"
+APP_VERSION = "5.1.5"
 INSTALL_COUNTER_URL = "https://notionlink-counter.ermisch-wlad.workers.dev/install"
 
 config_file_path = "config.json"
