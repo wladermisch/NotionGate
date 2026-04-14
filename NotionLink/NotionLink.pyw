@@ -60,7 +60,8 @@ def _acquire_single_instance_lock():
 
 try:
     from src.core import (APP_VERSION, config, config_file_path, logger, 
-                        init_sentry_if_enabled, exception_handler)
+                        init_sentry_if_enabled, exception_handler,
+                        send_install_counter_ping_for_first_setup)
     from src.server import start_server_blocking, TRAY_ICON_ICO
     from src.ui_dialogs import InitialSetupDialog
     from src.ui_main import NotionLinkTrayApp
@@ -109,6 +110,7 @@ def main():
     app.setQuitOnLastWindowClosed(False)
     
     app.tray_app = NotionLinkTrayApp(app)
+    did_complete_first_time_setup = False
     
     if not config.get("tutorial_completed", False):
         print("First run detected. Starting setup wizard...")
@@ -123,6 +125,7 @@ def main():
                 from src import core
                 core.config.clear()
                 core.config.update(json.load(config_file))
+            did_complete_first_time_setup = True
         except Exception as e:
             print(f"Failed to reload config after wizard: {e}")
             sys.exit(1)
@@ -155,6 +158,8 @@ def main():
     # Stagger startup so tray/dashboard are responsive before heavy background work begins.
     _start_threaded("Starting HTTP server thread...", lambda: start_server_blocking(app.tray_app), delay_ms=100)
     _start_ui("Starting Notion status check...", app.tray_app.run_status_check_thread, delay_ms=250)
+    if did_complete_first_time_setup:
+        _start_threaded("Registering anonymous install counter...", send_install_counter_ping_for_first_setup, delay_ms=700)
     _start_threaded("Starting file observer (background)...", app.tray_app.start_file_observer, delay_ms=1000)
     _start_threaded("Running startup sync...", _run_startup_sync_late, delay_ms=3500)
     

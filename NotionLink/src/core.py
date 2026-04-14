@@ -8,9 +8,12 @@ import threading
 import platform
 import socket
 import uuid
+import hashlib
+import urllib.request
 from collections import defaultdict
 
-APP_VERSION = "5.1.3"
+APP_VERSION = "5.1.4"
+INSTALL_COUNTER_URL = "https://notionlink-counter.ermisch-wlad.workers.dev/install"
 
 config_file_path = "config.json"
 
@@ -306,6 +309,64 @@ def load_config():
             pass
     
     return config
+
+
+def _get_install_id_path():
+    appdata_dir = os.getenv("APPDATA")
+    if appdata_dir:
+        base_dir = os.path.join(appdata_dir, "NotionLink")
+    else:
+        base_dir = path
+    return os.path.join(base_dir, "install_id")
+
+
+def _load_or_create_install_id():
+    install_id_path = _get_install_id_path()
+    try:
+        if os.path.isfile(install_id_path):
+            with open(install_id_path, "r", encoding="utf-8") as install_file:
+                install_id = install_file.read().strip()
+            if install_id:
+                return install_id
+    except Exception as e:
+        logger.warning(f"Failed to read install id: {e}")
+
+    install_id = str(uuid.uuid4())
+    try:
+        os.makedirs(os.path.dirname(install_id_path), exist_ok=True)
+        with open(install_id_path, "w", encoding="utf-8") as install_file:
+            install_file.write(install_id)
+    except Exception as e:
+        logger.warning(f"Failed to persist install id: {e}")
+    return install_id
+
+
+def send_install_counter_ping_for_first_setup():
+    try:
+        install_id = _load_or_create_install_id()
+        id_hash = hashlib.sha256(install_id.encode("utf-8")).hexdigest()
+        payload = {
+            "id_hash": id_hash,
+            "app_version": APP_VERSION,
+            "platform": platform.system(),
+        }
+
+        request = urllib.request.Request(
+            INSTALL_COUNTER_URL,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+
+        with urllib.request.urlopen(request, timeout=4) as response:
+            status_code = getattr(response, "status", 200)
+
+        if 200 <= status_code < 300:
+            logger.info("Install counter registration sent after first-time setup.")
+        else:
+            logger.warning(f"Install counter ping returned status {status_code}")
+    except Exception as e:
+        logger.warning(f"Install counter ping failed: {e}")
 
 
 def resource_path(relative_path):
