@@ -132,6 +132,7 @@ for NotionLink >v3
 * **What about Privacy?** We do **not** send or collect any of your personal data. The automated reports **do not include** your Notion Token, your file paths, your IP address, or any other personally identifiable information.
 * **What about Performance?** It does not affect the app's performance. It only runs for a split second if an error occurs and is otherwise completely inactive.
 * **Can I disable it?** Yes, you can disable this anonymous reporting at any time. You can uncheck the box during the initial setup, or later in the dashboard directly. ( `"sentry_enabled": false` in your `config.json` file.)
+* **Update v5.1.5** Since v5.1.5 NotionLink anonymously connect to the database to adjust the "Installation count" on the website, this doesnt send any personal information and only does this once on setup.
 
 ---
 
