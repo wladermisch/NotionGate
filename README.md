@@ -1,148 +1,59 @@
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/E1E21NYEKB)
-# NotionLink 🔗
 
-![NotionLink Tray Menu](https://gdurl.com/gYfT)
 
-**NotionLink** is a Windows tray utility that bridges your local file system with Notion. It creates clickable `http://localhost` links for your local files, allowing you to open them directly from your Notion pages.
+# 🚀 NotionGate (formerly NotionLink)
 
----
+**The seamless bridge between your local files and Notion.**
 
-## 💾 Installation & Setup
+[](https://ko-fi.com/E1E21NYEKB)
+[](https://notiongate.app/)
+[](https://notiongate.app/)
 
-### For Users (Recommended, Binary)
+-----
 
-1.  Download the latest `NotionLink_Installer_gvX.X.exe` from the **[Releases Page](https://github.com/wladermisch/NotionLink/releases)**.
-2.  Follow the instructions from the installer, select your desired program location and settings.
-3.  Run `NotionLink` from Windows Search. The app will create `config.json` and log files (`notionlink.log`, `error.log`) in the same folder.
-4.  Follow the **First-Time Setup** steps below.
+### 📖 What is NotionGate?
 
-### For Developers (from Source)
+NotionGate started as a simple OpenSource tool (**NotionLink**) to solve one specific problem: opening local files directly from your Notion workspace.
 
-1.  Clone this repository: `git clone https://github.com/wladermisch/NotionLink.git`
-2.  Install dependencies:
-    ```bash
-    pip install requirements.txt
-    ```
-3.  Run the script: `python NotionLink.pyw`
+As the project grew, so did the features and the time required for maintenance. To ensure a professional, stable, and long-term development of this tool, I decided to transition to a source-available model. This allows me to focus on high-quality updates, security, and a better user experience.
 
----
+-----
 
-## ⚙️ How to Use
+### 📥 Download & Getting Started
 
-### 1. First-Time Setup (Wizard)
+You can always find the latest, stable binary in the **[Releases Section](https://github.com/wladermisch/notiongate/releases/)**.
 
-After installation, a welcome wizard will appear (first time only).
+1.  **Download** the `NotionGate_Setup.exe`.
+2.  **Install** and log in (Basic plan is free\!).
+3.  **Connect** your local folders to Notion in seconds.
 
-1.  **Create Token:** The app needs an "Internal Integration Token" to talk to your Notion account.
-    * Click the button to open the [Notion Integrations page](https://www.notion.so/my-integrations).
-    * Create a "New integration" (e.g., name it "NotionLink").
-    * Copy the "Internal Integration Token" (Secret).
-2.  **Paste Token:** Paste the secret token into the input field.
-3.  **Share:** Go to the Notion page(s) you want to use, click "..." (Top right) -> "Add connections" -> and select your "NotionLink" integration. **This step is mandatory!**
-4.  **Autostart:** Check the box if you want the app to start with Windows.
-5.  **Error Reporting:** Leave the checkbox enabled to help us fix bugs anonymously.
-6.  Click "Save and Start". The app will save and launch in your system tray.
+-----
 
-> **Security Warning:**
-> Keep your secret token hidden! Never upload your `config.json` file or post your token in issues or any other public place. If you fear your token is compromised, visit the integrations page again to renew it. The app will never write your token to the log files.
+### 🛠 Support & Feedback
 
-### 2. The Tray Menu (Right-Click)
+Found a bug or have a feature request?
 
-Once running, find the NotionLink icon in your Windows tray (it may be in the `^` overflow menu). A **Right-Click** opens the main menu:
+  * **Issues:** Open a [GitHub Issue](https://github.com/wladermisch/notiongate/issues) right here.
+  * **Website:** Visit [NotionGate.app](https://notiongate.app/) for documentation and support.
+  * **Community:** Your feedback helps shape the future of this tool\!
 
-* **Notion: [Status]:** Shows your connection status (Green, Red, Gray). Clicking this forces a re-check.
-* **Convert Path:** Opens a dialog to convert a Windows path into a `localhost` link.
-* **Convert Clipboard Path:** Instantly converts the path in your clipboard and copies the new link.
-* **Notion: Start Manual Upload:** Lets you select a mapped folder to trigger a manual "backfill" of all its files.
-* **Manage Folder-Page Mappings:** The heart of the app. Define *which* folder syncs to *which* page here.
-* **Manage Notion Token:** Update your token if it ever changes.
-* **Start with Windows:** Toggles the autostart feature on or off.
-* **Quit:** Shuts down the application.
+-----
 
-### 3. Managing Mappings (Setting up Auto-Sync)
+### 📜 Legacy Version (Open Source)
 
-To make the app work automatically, you must set up mappings:
+I believe in the roots of this project. If you are looking for the original, open-source version (v2), it remains available for the community:
+👉 **[NotionLink v2 Legacy Source Code](https://github.com/wladermisch/NotionLink/releases/tag/v2)**
+I will still work on this to fix issues, please dont hesitate to create a issue.
 
-1.  Right-click the tray icon -> **Manage Folder-Page Mappings**.
-2.  Click **Add New Mapping (Folder + Page)**.
-3.  **Step 1:** Select the **local folder** you want to monitor.
-4.  **Step 2:** Paste the **Notion page link** where the file links should appear.
-5.  Click "Save".
-6.  **IMPORTANT:** You must **Restart the application** after saving new mappings. This is required for the file watcher (`watchdog`) to start monitoring the new folders.
+-----
 
-### 4. Troubleshooting & Submitting Bug Reports
+### ☕ Support the Development
 
-If you encounter a problem, you can find detailed logs in the same folder as your `NotionLink.exe`.
+If NotionGate saves you time every day, consider supporting the project. Every coffee helps me pay for servers, code-signing, and further development\!
 
-* `notionlink.log`: Contains general information and a history of app activity (e.g., "File synced", "Server started").
-* `error.log`: Contains details about any errors or crashes that have occurred.
+[](https://ko-fi.com/E1E21NYEKB)
 
-If you open a new [GitHub Issue](https://github.com/wladermisch/NotionLink/issues) to report a bug, **please manually attach the `error.log` file.**
+-----
 
-> **Privacy Note:** The `error.log` file *does* contain some system information (like your username, hostname, and machine ID) to help with debugging. This file **never** leaves your computer automatically. By manually attaching it to a GitHub issue, you are giving your consent to share this debugging information.
+*Developed with ❤️ in Germany.*
 
----
-
-## [Changelog](https://wladermisch.github.io/NotionLink/resources/changelog.html)
-
-**You can access the changelog on the [github page](https://wladermisch.github.io/NotionLink/resources/changelog.html).**
-The Website is still in developement, I recommend checking the release notes for full changelogs.
-
-## 📋 Features
-
-* **Runs Silently in the Tray:** Stays out of your way and is ready when you need it.
-* **Automatic Folder Sync:** Map a local folder to a Notion page. Any *new* file you save in that folder is automatically added as a link to that page.
-* **Startup & Backfill Sync:** On start (or when adding a new mapping), the app syncs *all* existing files in the folder to the Notion page.
-* **Smart Deduplication:** The app checks for existing URLs *and* filenames to prevent uploading duplicates.
-* **Starts with Windows:** A built-in option (in setup and the menu) to launch the app on boot. (You may enable or disable in the dashboard anytime.)
-* **Simple Setup Wizard:** A one-time setup dialog guides you through creating your Notion token.
-* **Dark Mode GUI:** A modern, dark-themed UI for managing your token and folder-page mappings.
-* **Link Converter Tools:** Menu options to quickly convert a path or your clipboard content into a `localhost` link.
-* **Dashboard:** A nice little dashboard with important info (logs) and useful buttons to create file links.
-
----
-
-## 🚀 The Problem
-
-Notion is fantastic for organization, but it has one major limitation: it cannot link directly to local files (like `C:\Users\YourName\Documents\Project.pdf`).
-
-Your options were:
-1.  **Upload to Notion:** This uses storage space, creates duplicates, and is impractical for large files or entire project folders.
-2.  **Edited files not synced:** Made some changes to your PDF? Because you uploaded the file into Notion, you won't be able to see the change.
-3.  **Use `file://` links:** These are often unclickable in Notion, forcing you to copy-paste the link into your browser or file explorer.
-
-## ✨ The Solution
-
-NotionLink solves this by running a tiny, local HTTP server on your PC.
-
-1.  It converts a path like `C:\Projects\File.pdf` into a link: `http://localhost:3030/C:/Projects/File.pdf`.
-2.  When you click this link in Notion, NotionLink intercepts the request.
-3.  Instead of serving a webpage, it simply opens `C:\Projects\File.pdf` directly with Windows Explorer.
-
-Best of all, it can monitor entire folders and automatically add links for new files to a specific Notion page.
-Unlike other software that are like this, we have no limitation on speed, files, directories and it´s completely free!
-
----
-
-## 🐞 Error Reporting & Privacy
-
-**This is very important to us.** To find and fix bugs, NotionLink uses an automated error reporting service called **Sentry**.
-for NotionLink >v3
-* **What it does:** If the application crashes unexpectedly, Sentry automatically sends us a anonymous report about the crash (e.g., "Error in line X"). This helps us fix bugs in future versions.
-* **What about Privacy?** We do **not** send or collect any of your personal data. The automated reports **do not include** your Notion Token, your file paths, your IP address, or any other personally identifiable information.
-* **What about Performance?** It does not affect the app's performance. It only runs for a split second if an error occurs and is otherwise completely inactive.
-* **Can I disable it?** Yes, you can disable this anonymous reporting at any time. You can uncheck the box during the initial setup, or later in the dashboard directly. ( `"sentry_enabled": false` in your `config.json` file.)
-* **Update v5.1.5** Since v5.1.5 NotionLink anonymously connect to the database to adjust the "Installation count" on the website, this doesnt send any personal information and only does this once on setup.
-
----
-
-## 📜 License & Contributions
-
-This project is **Source-Available**, not Open Source. All rights are reserved by the author.
-
-* **You MAY...** download, compile, and use the software for personal, non-commercial purposes.
-* **You MAY...** fork this repository to submit improvement suggestions (Pull Requests) to this project.
-* **You MAY NOT...** redistribute, sell, or use this code (in whole or in part) in another project (commercial or non-commercial) without the author's express written permission.
-
-For all licensing or contribution inquiries, please open a GitHub Issue.
-See the full [LICENSE.md](LICENSE.md) file for details.
+-----
