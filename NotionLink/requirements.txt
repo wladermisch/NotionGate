@@ -1,8 +1,0 @@
-PySide6
-Pillow
-pyperclip
-pyautogui
-notion-client
-watchdog
-pywin32
-sentry-sdk
