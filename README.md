@@ -1,6 +1,6 @@
 
 
-# 🚀 NotionGate (formerly NotionLink)
+# NotionGate (formerly NotionLink)
 
 **The seamless bridge between your local files and Notion.**
 
@@ -41,8 +41,9 @@ Found a bug or have a feature request?
 ### 📜 Legacy Version (Open Source)
 
 I believe in the roots of this project. If you are looking for the original, open-source version (v2), it remains available for the community:
-👉 **[NotionLink v2 Legacy Source Code](https://github.com/wladermisch/NotionLink/releases/tag/v2)**
+👉 **[NotionLink v2 Legacy Source Code](https://github.com/wladermisch/NotionLink/releases/tag/v2-legacy)**
 I will still work on this to fix issues, please dont hesitate to create a issue.
+Over time I plan to release the newer versions unlocked and open source.
 
 -----
 
